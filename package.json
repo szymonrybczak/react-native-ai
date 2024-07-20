@@ -1,7 +1,7 @@
 {
   "name": "react-native-ai",
   "version": "0.1.0",
-  "description": " ",
+  "description": "React Native AI",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
   "types": "lib/typescript/src/index.d.ts",
@@ -160,5 +160,9 @@
     "name": "RNAiSpec",
     "type": "modules",
     "jsSrcsDir": "src"
+  },
+  "dependencies": {
+    "@ai-sdk/provider": "^0.0.11",
+    "text-encoding": "^0.7.0"
   }
 }

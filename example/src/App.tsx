@@ -1,18 +1,22 @@
-import * as React from 'react';
-
-import { StyleSheet, View, Text } from 'react-native';
-import { multiply } from 'react-native-ai';
+import React from 'react';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { doGenerate } from 'react-native-ai';
 
 export default function App() {
-  const [result, setResult] = React.useState<number | undefined>();
-
-  React.useEffect(() => {
-    multiply(3, 7).then(setResult);
-  }, []);
+  const askQuestion = async () => {
+    try {
+      const data = await doGenerate('ai', 'whats react native');
+      console.log(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <Text>Result: {result}</Text>
+      <TouchableOpacity style={styles.button} onPress={askQuestion}>
+        <Text>Ask a question</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -22,10 +26,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'darkblue',
   },
-  box: {
-    width: 60,
-    height: 60,
-    marginVertical: 20,
-  },
+  button: { width: 200, height: 200, backgroundColor: 'red' },
 });

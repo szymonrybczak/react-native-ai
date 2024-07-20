@@ -16,6 +16,18 @@ Pod::Spec.new do |s|
 
   s.source_files = "ios/**/*.{h,m,mm}"
 
+  s.subspec 'MLCEngineObjC' do |ss|
+    ss.source_files = 'ios/**/*.{h,m,mm}'
+    ss.private_header_files = 'ios/ObjC/Private/*.h'
+    ss.pod_target_xcconfig = {
+      'HEADER_SEARCH_PATHS' => [
+        '/Users/szymonrybczak/ai/mlc-llm/3rdparty/tvm/include',
+        '/Users/szymonrybczak/ai/mlc-llm/3rdparty/tvm/3rdparty/dmlc-core/include',
+        '/Users/szymonrybczak/ai/mlc-llm/3rdparty/tvm/3rdparty/dlpack/include'
+      ]
+    }
+  end
+
   # Use install_modules_dependencies helper to install the dependencies if React Native version >=0.71.0.
   # See https://github.com/facebook/react-native/blob/febf6b7f33fdb4904669f99d795eba4c0f95d7bf/scripts/cocoapods/new_architecture.rb#L79.
   if respond_to?(:install_modules_dependencies, true)

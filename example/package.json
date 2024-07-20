@@ -11,18 +11,19 @@
     "start": "react-native start"
   },
   "dependencies": {
+    "ai": "^3.2.15",
     "react": "18.2.0",
-    "react-native": "0.74.2"
+    "react-native": "0.74.2",
+    "text-encoding": "^0.7.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@babel/preset-env": "^7.20.0",
     "@babel/runtime": "^7.20.0",
-    "@react-native/babel-preset": "0.74.84",
-    "@react-native/metro-config": "0.74.84",
-    "@react-native/typescript-config": "0.74.84",
-    "@rnx-kit/metro-config": "^1.3.15",
-    "react-native-test-app": "^3.8.7",
+    "@react-native/babel-preset": "0.74.85",
+    "@react-native/metro-config": "0.74.85",
+    "@react-native/typescript-config": "0.74.85",
     "babel-plugin-module-resolver": "^5.0.0"
   },
   "engines": {
