@@ -1,26 +1,9 @@
 # react-native-ai
 
- 
+Run LLM locally in React Native app via Universal [MLC LLM Engine](https://github.com/mlc-ai/mlc-llm) with compatibility for [Vercel AI SDK](https://sdk.vercel.ai/docs/).
 
-## Installation
-
-```sh
-npm install react-native-ai
-```
-
-## Usage
-
-```js
-import { multiply } from 'react-native-ai';
-
-// ...
-
-const result = await multiply(3, 7);
-```
-
-## Contributing
-
-See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
+> [!CAUTION]
+> This projects is an experimental project and is not ready for production!
 
 ## License
 
