@@ -13,18 +13,66 @@
 
 @implementation Ai
 
+{
+    bool hasListeners;
+}
+
 RCT_EXPORT_MODULE()
+
+- (NSArray<NSString *> *)supportedEvents {
+    return @[@"onChatUpdate", @"onChatComplete"];
+}
+
+-(void)startObserving {
+    hasListeners = YES;
+
+}
+
+-(void)stopObserving {
+    hasListeners = NO;
+}
+
 
 - (instancetype)init {
     self = [super init];
     if (self) {
         _engine = [[MLCEngine alloc] init];
         _bundleURL = [[[NSBundle mainBundle] bundleURL] URLByAppendingPathComponent:@"bundle"];
-        _modelPath = @"Llama-3-8B-Instruct-q3f16_1-MLC";
-        _modelLib = @"llama_q3f16_1";
-        _displayText = @"";
+        _modelPath = @"Phi-3-mini-4k-instruct-q4f16_1-MLC";
+        _modelLib = @"phi3_q4f16_1_5c8034316e4d4f818718cf6bf5bf5e89";
     }
     return self;
+}
+
+- (NSDictionary *)parseResponseString:(NSString *)responseString {
+    NSData *jsonData = [responseString dataUsingEncoding:NSUTF8StringEncoding];
+    NSError *error;
+    NSArray *jsonArray = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&error];
+    
+    if (error) {
+        NSLog(@"Error parsing JSON: %@", error);
+        return nil;
+    }
+    
+    if (jsonArray.count > 0) {
+        NSDictionary *responseDict = jsonArray[0];
+        NSArray *choices = responseDict[@"choices"];
+        if (choices.count > 0) {
+            NSDictionary *choice = choices[0];
+            NSDictionary *delta = choice[@"delta"];
+            NSString *content = delta[@"content"];
+            NSString *finishReason = choice[@"finish_reason"];
+            
+            BOOL isFinished = (finishReason != nil && ![finishReason isEqual:[NSNull null]]);
+            
+            return @{
+                @"content": content ?: @"",
+                @"isFinished": @(isFinished)
+            };
+        }
+    }
+    
+    return nil;
 }
 
 RCT_EXPORT_METHOD(doGenerate:(NSString *)instanceId
@@ -33,6 +81,8 @@ RCT_EXPORT_METHOD(doGenerate:(NSString *)instanceId
                   reject:(RCTPromiseRejectBlock)reject)
 {
     NSLog(@"Generating for instance ID: %@, with text: %@", instanceId, text);
+    _displayText = @"";
+    __block BOOL hasResolved = NO;
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSURL *modelLocalURL = [self.bundleURL URLByAppendingPathComponent:self.modelPath];
@@ -46,20 +96,32 @@ RCT_EXPORT_METHOD(doGenerate:(NSString *)instanceId
         };
         
         [self.engine chatCompletionWithMessages:@[message] completion:^(id response) {
-            if ([response isKindOfClass:[NSDictionary class]]) {
-                NSDictionary *responseDictionary = (NSDictionary *)response;
-                if (responseDictionary[@"usage"]) {
-                    NSString *usageText = [self getUsageTextFromExtra:responseDictionary[@"usage"][@"extra"]];
-                    self.displayText = [self.displayText stringByAppendingFormat:@"\n%@", usageText];
-                    resolve(self.displayText);
-                } else {
-                    NSString *content = responseDictionary[@"choices"][0][@"delta"][@"content"];
+            if ([response isKindOfClass:[NSString class]]) {
+                NSDictionary *parsedResponse = [self parseResponseString:response];
+                if (parsedResponse) {
+                    NSString *content = parsedResponse[@"content"];
+                    BOOL isFinished = [parsedResponse[@"isFinished"] boolValue];
+                    
                     if (content) {
                         self.displayText = [self.displayText stringByAppendingString:content];
                     }
+                    
+                    if (isFinished && !hasResolved) {
+                        hasResolved = YES;
+                        resolve(self.displayText);
+                    }
+
+                } else {
+                    if (!hasResolved) {
+                        hasResolved = YES;
+                        reject(@"PARSE_ERROR", @"Failed to parse response", nil);
+                    }
                 }
-            } else if ([response isKindOfClass:[NSString class]]) {
-                self.displayText = [self.displayText stringByAppendingString:(NSString *)response];
+            } else {
+                if (!hasResolved) {
+                    hasResolved = YES;
+                    reject(@"INVALID_RESPONSE", @"Received an invalid response type", nil);
+                }
             }
         }];
     });
@@ -70,9 +132,12 @@ RCT_EXPORT_METHOD(doStream:(NSString *)instanceId
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
+        
     NSLog(@"Streaming for instance ID: %@, with text: %@", instanceId, text);
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        __block BOOL hasResolved = NO;
+        
         NSURL *modelLocalURL = [self.bundleURL URLByAppendingPathComponent:self.modelPath];
         NSString *modelLocalPath = [modelLocalURL path];
         
@@ -84,23 +149,40 @@ RCT_EXPORT_METHOD(doStream:(NSString *)instanceId
         };
         
         [self.engine chatCompletionWithMessages:@[message] completion:^(id response) {
-            if ([response isKindOfClass:[NSDictionary class]]) {
-                NSDictionary *responseDictionary = (NSDictionary *)response;
-                if (responseDictionary[@"usage"]) {
-                    NSString *usageText = [self getUsageTextFromExtra:responseDictionary[@"usage"][@"extra"]];
-                    self.displayText = [self.displayText stringByAppendingFormat:@"\n%@", usageText];
-                    resolve(self.displayText);
-                } else {
-                    NSString *content = responseDictionary[@"choices"][0][@"delta"][@"content"];
+            if ([response isKindOfClass:[NSString class]]) {
+                NSDictionary *parsedResponse = [self parseResponseString:response];
+                if (parsedResponse) {
+                    NSString *content = parsedResponse[@"content"];
+                    BOOL isFinished = [parsedResponse[@"isFinished"] boolValue];
+                    
                     if (content) {
                         self.displayText = [self.displayText stringByAppendingString:content];
-//                        [self sendEventWithName:@"onStreamProgress" body:@{@"text": content}];
+                        if (self->hasListeners) {
+                             [self sendEventWithName:@"onChatUpdate" body:@{@"content": content}];
+                         }
+                    }
+                    
+                    if (isFinished && !hasResolved) {
+                        hasResolved = YES;
+                        if (self->hasListeners) {
+                             [self sendEventWithName:@"onChatComplete" body:nil];
+                         }
+                        
+                        resolve(@"");
+                        
+                        return;
+                    }
+                } else {
+                    if (!hasResolved) {
+                        hasResolved = YES;
+                        reject(@"PARSE_ERROR", @"Failed to parse response", nil);
                     }
                 }
-            } else if ([response isKindOfClass:[NSString class]]) {
-                NSString *content = (NSString *)response;
-                self.displayText = [self.displayText stringByAppendingString:content];
-//                [self sendEventWithName:@"onStreamProgress" body:@{@"text": content}];
+            } else {
+                if (!hasResolved) {
+                    hasResolved = YES;
+                    reject(@"INVALID_RESPONSE", @"Received an invalid response type", nil);
+                }
             }
         }];
     });
@@ -112,24 +194,13 @@ RCT_EXPORT_METHOD(getModel:(NSString *)name
                   reject:(RCTPromiseRejectBlock)reject)
 {
     NSLog(@"Getting model: %@", name);
-    
-    // For now, we're just returning the model path and lib
+    // TODO: add a logic for fetching models if they're not presented in the `bundle/` directory.
     NSDictionary *modelInfo = @{
         @"path": self.modelPath,
         @"lib": self.modelLib
     };
     
     resolve(modelInfo);
-}
-
-- (NSString *)getUsageTextFromExtra:(NSDictionary *)extra {
-    // Implement this method to convert the extra dictionary to a string
-    // This is a placeholder implementation
-    return [extra description];
-}
-
-- (NSArray<NSString *> *)supportedEvents {
-    return @[@"onStreamProgress"];
 }
 
 // Don't compile this code when we build for the old architecture.

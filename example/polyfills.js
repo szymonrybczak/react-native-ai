@@ -1,3 +1,5 @@
+import 'react-native-get-random-values';
+
 // @ts-ignore
 import { polyfillGlobal } from 'react-native/Libraries/Utilities/PolyfillFunctions';
 
