@@ -1,17 +1,11 @@
 import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import {
-  UnsupportedFunctionalityError,
   type LanguageModelV1,
   type LanguageModelV1CallOptions,
   type LanguageModelV1CallWarning,
   type LanguageModelV1FinishReason,
   type LanguageModelV1FunctionToolCall,
-  type LanguageModelV1ImagePart,
-  type LanguageModelV1Prompt,
   type LanguageModelV1StreamPart,
-  type LanguageModelV1TextPart,
-  type LanguageModelV1ToolCallPart,
-  type LanguageModelV1ToolResultPart,
 } from '@ai-sdk/provider';
 import './polyfills';
 import { ReadableStream } from 'web-streams-polyfill/ponyfill';
@@ -47,26 +41,6 @@ export interface AiModelSettings extends Record<string, unknown> {}
 export interface Model {
   modelId: string;
   modelLib: string;
-}
-
-function getStringContent(
-  content:
-    | string
-    | (LanguageModelV1TextPart | LanguageModelV1ImagePart)[]
-    | (LanguageModelV1TextPart | LanguageModelV1ToolCallPart)[]
-    | LanguageModelV1ToolResultPart[]
-): string {
-  if (typeof content === 'string') {
-    return content.trim();
-  } else if (Array.isArray(content) && content.length > 0) {
-    const [first] = content;
-    if (first.type !== 'text') {
-      throw new UnsupportedFunctionalityError({ functionality: 'toolCall' });
-    }
-    return first.text.trim();
-  } else {
-    return '';
-  }
 }
 
 class AiModel implements LanguageModelV1 {
@@ -106,7 +80,6 @@ class AiModel implements LanguageModelV1 {
     const model = await this.getModel();
     console.log({ model });
 
-    // TODO: add proper types
     const message =
       options.prompt[options.prompt.length - 1]!.content[0]!.text!;
     console.log({ message });
