@@ -1,32 +1,69 @@
-import React from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
-import { doGenerate } from 'react-native-ai';
+import React, { useState } from 'react';
+import { SafeAreaView, StyleSheet } from 'react-native';
+import { GiftedChat, type IMessage } from 'react-native-gifted-chat';
+import { getModel } from 'react-native-ai';
+import { generateText } from 'ai';
+import { v4 as uuid } from 'uuid';
+import NetworkInfo from './NetworkInfo';
 
-export default function App() {
-  const askQuestion = async () => {
-    try {
-      const data = await doGenerate('ai', 'whats react native');
-      console.log(data);
-    } catch (e) {
-      console.error(e);
-    }
+const modelId = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
+
+const aiBot = {
+  _id: 2,
+  name: 'AI Chat Bot',
+  avatar: require('./../assets/avatar.png'),
+};
+
+export default function Example() {
+  const [messages, setMessages] = useState<IMessage[]>([
+    {
+      _id: uuid(),
+      text: 'Hello! How can I help you today?',
+      createdAt: new Date(),
+      user: aiBot,
+    },
+  ]);
+
+  const onSendMessage = async (prompt: string) => {
+    const { text } = await generateText({
+      model: getModel(modelId),
+      prompt,
+    });
+
+    setMessages((previousMessages) =>
+      GiftedChat.append(previousMessages, {
+        // @ts-ignore
+        _id: uuid(),
+        text,
+        createdAt: new Date(),
+        user: aiBot,
+      })
+    );
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={askQuestion}>
-        <Text>Ask a question</Text>
-      </TouchableOpacity>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <NetworkInfo />
+      <GiftedChat
+        messages={messages}
+        onSend={(newMessage) => {
+          setMessages((previousMessages) =>
+            GiftedChat.append(previousMessages, newMessage)
+          );
+
+          onSendMessage(newMessage[0]!.text);
+        }}
+        user={{
+          _id: 1,
+        }}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'darkblue',
+    backgroundColor: '#fff',
   },
-  button: { width: 200, height: 200, backgroundColor: 'red' },
 });
