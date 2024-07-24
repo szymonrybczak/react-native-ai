@@ -4,6 +4,7 @@ import { GiftedChat, type IMessage } from 'react-native-gifted-chat';
 import { getModel } from 'react-native-ai';
 import { generateText } from 'ai';
 import { v4 as uuid } from 'uuid';
+import NetworkInfo from './NetworkInfo';
 
 const modelId = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
 
@@ -42,6 +43,7 @@ export default function Example() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <NetworkInfo />
       <GiftedChat
         messages={messages}
         onSend={(newMessage) => {

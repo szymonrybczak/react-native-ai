@@ -111,7 +111,11 @@ class AiModel implements LanguageModelV1 {
       options.prompt[options.prompt.length - 1]!.content[0]!.text!;
     console.log({ message });
 
-    const text = await Ai.doGenerate(model, message);
+    let text = '';
+
+    if (message.trim().length > 0) {
+      text = await Ai.doGenerate(model, message);
+    }
 
     return {
       text,
