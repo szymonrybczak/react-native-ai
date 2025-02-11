@@ -12,7 +12,7 @@ Pod::Spec.new do |s|
   s.authors      = package["author"]
 
   s.platforms    = { :ios => min_ios_version_supported }
-  s.source       = { :git => "https://github.com/szymonrybczak/react-native-ai.git", :tag => "#{s.version}" }
+  s.source       = { :git => "https://github.com/callstackincubator/ai.git", :tag => "#{s.version}" }
 
   s.source_files = "ios/**/*.{h,m,mm}"
 
@@ -21,9 +21,9 @@ Pod::Spec.new do |s|
     ss.private_header_files = 'ios/ObjC/Private/*.h'
     ss.pod_target_xcconfig = {
       'HEADER_SEARCH_PATHS' => [
-        '/Users/szymonrybczak/ai/mlc-llm/3rdparty/tvm/include',
-        '/Users/szymonrybczak/ai/mlc-llm/3rdparty/tvm/3rdparty/dmlc-core/include',
-        '/Users/szymonrybczak/ai/mlc-llm/3rdparty/tvm/3rdparty/dlpack/include'
+        '$(PODS_TARGET_SRCROOT)/3rdparty/tvm/include',
+        '$(PODS_TARGET_SRCROOT)/3rdparty/tvm/3rdparty/dmlc-core/include',
+        '$(PODS_TARGET_SRCROOT)/3rdparty/tvm/3rdparty/dlpack/include'
       ]
     }
   end
