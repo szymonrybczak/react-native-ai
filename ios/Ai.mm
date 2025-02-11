@@ -37,9 +37,26 @@ RCT_EXPORT_MODULE()
     self = [super init];
     if (self) {
         _engine = [[MLCEngine alloc] init];
+
+        // Locate the config file in the bundle
         _bundleURL = [[[NSBundle mainBundle] bundleURL] URLByAppendingPathComponent:@"bundle"];
-        _modelPath = @"Phi-3-mini-4k-instruct-q4f16_1-MLC";
-        _modelLib = @"phi3_q4f16_1_5c8034316e4d4f818718cf6bf5bf5e89";
+        NSURL *configURL = [_bundleURL URLByAppendingPathComponent:@"mlc-app-config.json"];
+
+        // Read and parse JSON
+        NSData *jsonData = [NSData dataWithContentsOfURL:configURL];
+        if (jsonData) {
+            NSError *error;
+            NSDictionary *jsonDict = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&error];
+
+            if (!error && [jsonDict isKindOfClass:[NSDictionary class]]) {
+                NSArray *modelList = jsonDict[@"model_list"];
+                if ([modelList isKindOfClass:[NSArray class]] && modelList.count > 0) {
+                    NSDictionary *firstModel = modelList[0];
+                    _modelPath = firstModel[@"model_path"];
+                    _modelLib = firstModel[@"model_lib"];
+                }
+            }
+        }
     }
     return self;
 }
@@ -48,12 +65,12 @@ RCT_EXPORT_MODULE()
     NSData *jsonData = [responseString dataUsingEncoding:NSUTF8StringEncoding];
     NSError *error;
     NSArray *jsonArray = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&error];
-    
+
     if (error) {
         NSLog(@"Error parsing JSON: %@", error);
         return nil;
     }
-    
+
     if (jsonArray.count > 0) {
         NSDictionary *responseDict = jsonArray[0];
         NSArray *choices = responseDict[@"choices"];
@@ -62,16 +79,16 @@ RCT_EXPORT_MODULE()
             NSDictionary *delta = choice[@"delta"];
             NSString *content = delta[@"content"];
             NSString *finishReason = choice[@"finish_reason"];
-            
+
             BOOL isFinished = (finishReason != nil && ![finishReason isEqual:[NSNull null]]);
-            
+
             return @{
                 @"content": content ?: @"",
                 @"isFinished": @(isFinished)
             };
         }
     }
-    
+
     return nil;
 }
 
@@ -83,29 +100,29 @@ RCT_EXPORT_METHOD(doGenerate:(NSString *)instanceId
     NSLog(@"Generating for instance ID: %@, with text: %@", instanceId, text);
     _displayText = @"";
     __block BOOL hasResolved = NO;
-    
+
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         NSURL *modelLocalURL = [self.bundleURL URLByAppendingPathComponent:self.modelPath];
         NSString *modelLocalPath = [modelLocalURL path];
-        
+
         [self.engine reloadWithModelPath:modelLocalPath modelLib:self.modelLib];
-        
+
         NSDictionary *message = @{
             @"role": @"user",
             @"content": text
         };
-        
+
         [self.engine chatCompletionWithMessages:@[message] completion:^(id response) {
             if ([response isKindOfClass:[NSString class]]) {
                 NSDictionary *parsedResponse = [self parseResponseString:response];
                 if (parsedResponse) {
                     NSString *content = parsedResponse[@"content"];
                     BOOL isFinished = [parsedResponse[@"isFinished"] boolValue];
-                    
+
                     if (content) {
                         self.displayText = [self.displayText stringByAppendingString:content];
                     }
-                    
+
                     if (isFinished && !hasResolved) {
                         hasResolved = YES;
                         resolve(self.displayText);
@@ -132,44 +149,44 @@ RCT_EXPORT_METHOD(doStream:(NSString *)instanceId
                   resolve:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
-        
+
     NSLog(@"Streaming for instance ID: %@, with text: %@", instanceId, text);
-    
+
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         __block BOOL hasResolved = NO;
-        
+
         NSURL *modelLocalURL = [self.bundleURL URLByAppendingPathComponent:self.modelPath];
         NSString *modelLocalPath = [modelLocalURL path];
-        
+
         [self.engine reloadWithModelPath:modelLocalPath modelLib:self.modelLib];
-        
+
         NSDictionary *message = @{
             @"role": @"user",
             @"content": text
         };
-        
+
         [self.engine chatCompletionWithMessages:@[message] completion:^(id response) {
             if ([response isKindOfClass:[NSString class]]) {
                 NSDictionary *parsedResponse = [self parseResponseString:response];
                 if (parsedResponse) {
                     NSString *content = parsedResponse[@"content"];
                     BOOL isFinished = [parsedResponse[@"isFinished"] boolValue];
-                    
+
                     if (content) {
                         self.displayText = [self.displayText stringByAppendingString:content];
                         if (self->hasListeners) {
                              [self sendEventWithName:@"onChatUpdate" body:@{@"content": content}];
                          }
                     }
-                    
+
                     if (isFinished && !hasResolved) {
                         hasResolved = YES;
                         if (self->hasListeners) {
                              [self sendEventWithName:@"onChatComplete" body:nil];
                          }
-                        
+
                         resolve(@"");
-                        
+
                         return;
                     }
                 } else {
@@ -199,7 +216,7 @@ RCT_EXPORT_METHOD(getModel:(NSString *)name
         @"path": self.modelPath,
         @"lib": self.modelLib
     };
-    
+
     resolve(modelInfo);
 }
 
