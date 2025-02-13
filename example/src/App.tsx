@@ -19,9 +19,7 @@ export default function Example() {
 
   const onSendMessage = useCallback(
     async (prompt: string) => {
-      console.log('MODEL: ', modelId);
       if (modelId) {
-        console.log('Working on it!');
         const { text } = await generateText({
           model: getModel(modelId),
           prompt,

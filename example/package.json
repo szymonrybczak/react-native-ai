@@ -13,8 +13,7 @@
   "dependencies": {
     "@react-native-community/netinfo": "^11.3.2",
     "@types/uuid": "^10.0.0",
-    "ai": "^3.2.15",
-    "eventsource-parser": "^3.0.0",
+    "ai": "^4.1.36",
     "react": "18.2.0",
     "react-native": "0.74.2",
     "react-native-get-random-values": "^1.11.0",
