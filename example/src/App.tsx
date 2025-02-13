@@ -22,6 +22,7 @@ export default function Example() {
       if (modelId) {
         const { text } = await generateText({
           model: getModel(modelId),
+          temperature: 0.6,
           prompt,
         });
 
